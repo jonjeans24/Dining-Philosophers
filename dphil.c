@@ -7,19 +7,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <signal.h>
 #include <unistd.h>
 #include <semaphore.h>
 #include <pthread.h>
 #include <string.h>
 
-#define LEFT ((ph_num+count-1)%count)       // number of i’s left neighbor
+#define LEFT ((ph_num+count-1)%count)     // number of i’s left neighbor
 #define RIGHT ((ph_num+1)%count)          // number of i’s right neighbor
-#define THINKING 0                  // philosopher is thinking
-#define HUNGRY 1                    // philosopher is trying to get forks
-#define EATING 2                    // philosopher is eating
+#define THINKING 0                        // philosopher is thinking
+#define HUNGRY 1                          // philosopher is trying to get forks
+#define EATING 2                          // philosopher is eating
 
-sem_t mutex;                        // mutual exclusion for critical regions
-sem_t *s;                           // one semaphore per philosopher
+sem_t mutex;                              // mutual exclusion for critical regions
+sem_t *s;                                 // one semaphore per philosopher
 
 void * philosopher(void *num);
 void take_forks(int);
@@ -65,32 +66,53 @@ int main(int argc, char **argv)
     state = malloc(count *sizeof(state[0]));
     phil = malloc(count *sizeof(phil[0]));
 
-    for(int i=0; i<count; i++)          // initialize philosophers
+    for(int i=0; i<count; i++)           // initialize philosophers
         phil[i] = i;
     pthread_t thread_id[count];
-    sem_init(&mutex,0,1);           // initialize mutex semaphore
+    sem_init(&mutex,0,1);               // initialize mutex semaphore
     for(int i=0; i<count; i++)
-        sem_init(&s[i],0,0);        // initialize philosopher semaphores
+        sem_init(&s[i],0,0);            // initialize philosopher semaphores
     for(int i=0; i<count; i++)
     {
         pthread_create(&thread_id[i], NULL, philosopher, &phil[i]);
         printf("Philosopher %d is thinking\n",i+1);
     }
-    for(int i=0;i<count;i++)
+    for(int i=0; i<count; i++)
         pthread_join(thread_id[i],NULL);
 }
 
-bool is_number(char number[])
+bool is_number(char number[])           // used to error check user input
 {
-    for (int i=0; number[i] != 0; i++){
-        if (!isdigit(number[i]))
+    for (int i=0; number[i] != 0; i++){ // runs through each character in array
+        if (!isdigit(number[i]))        // and determines if it's a number
             return false;
     }
     return true;
 }
 
+void sig_handler(int signo)                 // function used for ctrl-c signal
+{
+    if (signo == SIGINT){                   // function cleans up all semaphores
+        printf("\nReceived SIGINT ctr-c\n");
+        sem_close(&mutex);                  // close mutex
+        printf("mutex closed...\n");
+        for (int i=0; i<count; i++){
+            sem_close(&s[i]);               // close all philosophers
+            printf("Philosopher %d closed...\n", i+1);
+        }
+        printf("Exiting program...\n");
+        exit(1);
+    }
+}
+
 void *philosopher(void *num)
 {
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = sig_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);    // used when ctr+c signal found
+
     while(1)                        // repeat forever
     {
         int *i = num;
@@ -128,7 +150,7 @@ void put_forks(int ph_num)
 
 void test(int ph_num)
 {
-    if(original){
+    if(original){       // use this condition if running original program
         if (state[ph_num] == HUNGRY && state[LEFT] != EATING && state[RIGHT] != EATING)
         {
             state[ph_num] = EATING;
@@ -138,7 +160,7 @@ void test(int ph_num)
             sem_post(&s[ph_num]);
         }
     }
-    else{
+    else{               // use this condition if running with knives
         if (state[ph_num] == HUNGRY && state[LEFT] != EATING && state[RIGHT] != EATING
             && knives > 0)
         {
