@@ -25,6 +25,7 @@ void * philosopher(void *num);
 void take_forks(int);
 void put_forks(int);
 void test(int);
+bool is_number(char*);
 
 int *state;                        // array to keep track of everyone’s state
 int *phil;                         // array to hold list of philosophers
@@ -35,6 +36,23 @@ bool original = true;
 
 int main(int argc, char **argv)
 {
+    if (argc != 4){                 // Error checking for number of inputs
+        perror("Bad input");
+        exit(1);
+    }
+    if (!is_number(argv[1])){       // Error Checking the input for philosophers
+        perror("Bad input");
+        exit(1);
+    }
+    if (!is_number(argv[2])){       // Error checking the input for knives
+        perror("Bad input");
+        exit(1);
+    }
+    if (!is_number(argv[3])){       // Error checking for input of time
+        perror("Bad input");
+        exit(1);
+    }
+
     count = atoi(argv[1]);          // initial number of philosophers
     knives = atoi(argv[2]);         // initial number of knives
     sleep_time = atoi(argv[3]);     // time for sleeping
@@ -60,6 +78,15 @@ int main(int argc, char **argv)
     }
     for(int i=0;i<count;i++)
         pthread_join(thread_id[i],NULL);
+}
+
+bool is_number(char number[])
+{
+    for (int i=0; number[i] != 0; i++){
+        if (!isdigit(number[i]))
+            return false;
+    }
+    return true;
 }
 
 void *philosopher(void *num)
