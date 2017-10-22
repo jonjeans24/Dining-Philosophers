@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <semaphore.h>
@@ -30,12 +31,17 @@ int *phil;                         // array to hold list of philosophers
 int count;                         // number of philosophers
 int knives;                        // number of knives
 int sleep_time;                    // amount of time a philosopher sleeps
+bool original = true;
 
 int main(int argc, char **argv)
 {
-    count = atoi(argv[1]);
-    knives = atoi(argv[2]);
-    sleep_time = atoi(argv[3]);
+    count = atoi(argv[1]);          // initial number of philosophers
+    knives = atoi(argv[2]);         // initial number of knives
+    sleep_time = atoi(argv[3]);     // time for sleeping
+
+    if (knives > 0){
+        original = false;           // if knives = 0, then run original code w/o knives
+    }
 
     s = malloc(count *sizeof(s[0]));
     state = malloc(count *sizeof(state[0]));
@@ -83,7 +89,10 @@ void put_forks(int ph_num)
 {
     sem_wait(&mutex);               // enter critical region
     state[ph_num] = THINKING;       // philosopher has finished eating
+    knives = knives + 1;
     printf("Philosopher %d putting fork %d and %d down\n",ph_num+1,LEFT+1,ph_num+1);
+    if (!original)
+        printf("Philosopher %d putting knife down\n", ph_num+1);
     printf("Philosopher %d is thinking\n",ph_num+1);
     test(LEFT);                     // see if left neighbor can now eat
     test(RIGHT);                    // see if right neighbor can now eat
@@ -92,12 +101,27 @@ void put_forks(int ph_num)
 
 void test(int ph_num)
 {
-    if (state[ph_num] == HUNGRY && state[LEFT] != EATING && state[RIGHT] != EATING)
-    {
-        state[ph_num] = EATING;
-        sleep(sleep_time + 2);
-        printf("Philosopher %d takes fork %d and %d\n",ph_num+1,LEFT+1,ph_num+1);
-        printf("Philosopher %d is Eating\n",ph_num+1);
-        sem_post(&s[ph_num]);
+    if(original){
+        if (state[ph_num] == HUNGRY && state[LEFT] != EATING && state[RIGHT] != EATING)
+        {
+            state[ph_num] = EATING;
+            sleep(sleep_time + 2);
+            printf("Philosopher %d takes fork %d and %d\n",ph_num+1,LEFT+1,ph_num+1);
+            printf("Philosopher %d is Eating\n",ph_num+1);
+            sem_post(&s[ph_num]);
+        }
+    }
+    else{
+        if (state[ph_num] == HUNGRY && state[LEFT] != EATING && state[RIGHT] != EATING
+            && knives > 0)
+        {
+            knives = knives - 1;
+            state[ph_num] = EATING;
+            sleep(sleep_time + 2);
+            printf("Philosopher %d takes fork %d and %d\n",ph_num+1,LEFT+1,ph_num+1);
+            printf("Philosopher %d takes knife from pool\n", ph_num+1);
+            printf("Philosopher %d is Eating\n",ph_num+1);
+            sem_post(&s[ph_num]);
+        }
     }
 }
