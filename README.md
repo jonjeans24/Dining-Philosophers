@@ -4,8 +4,11 @@ There is N philosophers around a table each with a fork to their left and right.
 
 To run the code, I've included a Makefile.
 From the terminal, type >> make all
+
 This will compile dphil.c
+
 The program is then run from the terminal with the following arguments:
+
 >>./dphil <number of philosophers> <number of knives> <time delay>
   Example: <number of philosophers> = 5, <number of knives> = 3, <time delay> = 1
            >>./dphil 5 3 1
